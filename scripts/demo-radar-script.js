@@ -165,7 +165,7 @@ function onload() {
 
   var pageState = dataStore();
 
-  var myWorker = new Worker('../scripts/generateVerticesRadarDemo.js');
+  var myWorker = new Worker('scripts/generateVerticesRadarDemo.js');
   myWorker.onmessage=function(oEvent) {
     var data = new Float32Array(oEvent.data.data);
     var indices = new Int32Array(oEvent.data.indices);
