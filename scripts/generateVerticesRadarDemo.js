@@ -3,7 +3,7 @@ onmessage=function(oEvent) {
 
   //250/2
   var gateRes = 1;
-  if (url == "data/radar/KTLX_sub.json") {
+  if (url == "../data/radar/KTLX_sub.json") {
     gateRes = 1000/2;
   }
 
@@ -114,7 +114,7 @@ onmessage=function(oEvent) {
   //get file from server
   var oReq = new XMLHttpRequest();
   oReq.addEventListener("load", reqListener);
-  oReq.open("GET", "/"+url);
+  oReq.open("GET", url);
   oReq.send();
 
   var output = [];

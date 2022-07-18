@@ -7,7 +7,7 @@ function onload() {
   settings["rlat"]=35.2333;
   settings["rlon"]=-101.709;
   settings["phi"]=0.483395;
-  settings["base"] = "test.json";
+  settings["base"] = "../data/radar/test.json";
 
 
   //set up mapbox map
@@ -76,7 +76,7 @@ function onload() {
 
   map.on("load", function() {
     //map.addLayer(layer3d);
-    myWorker.postMessage(["data/radar/"+settings["base"],settings["phi"],settings["rlat"],settings["rlon"]]);
+    myWorker.postMessage([settings["base"],settings["phi"],settings["rlat"],settings["rlon"]]);
   })
 
   //compile shaders
@@ -165,7 +165,7 @@ function onload() {
 
   var pageState = dataStore();
 
-  var myWorker = new Worker('/scripts/generateVerticesRadarDemo.js');
+  var myWorker = new Worker('./scripts/generateVerticesRadarDemo.js');
   myWorker.onmessage=function(oEvent) {
     var data = new Float32Array(oEvent.data.data);
     var indices = new Int32Array(oEvent.data.indices);
