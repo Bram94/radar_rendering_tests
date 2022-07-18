@@ -156,11 +156,11 @@ function onload() {
   }
 
   function dataStore() {
-     return {
-       positions:null,
-       indices:null,
-       colors:null
-     }
+    return {
+      positions:null,
+      indices:null,
+      colors:null
+    }
   }
 
   var pageState = dataStore();
