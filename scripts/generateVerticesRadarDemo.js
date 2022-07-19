@@ -2,7 +2,7 @@ onmessage=function(oEvent) {
   var url = oEvent.data[0];
 
   //250/2
-  var gateRes = 1;
+  var gateRes = 150;
   if (url == "../data/radar/KTLX_sub.json") {
     gateRes = 1000/2;
   }
@@ -74,8 +74,8 @@ onmessage=function(oEvent) {
 
       //loop through radar range gates
       for (var i=0; i<values.length; i++) {
-        bottomR = values[i]-gateRes;
-        topR = values[i] + gateRes;
+        bottomR = values[i]*100 - gateRes;
+        topR = values[i]*100 + gateRes;
 
         var bl = calculatePosition(leftAz, bottomR);
         //console.log(bl, bl.x);

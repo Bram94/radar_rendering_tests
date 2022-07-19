@@ -22,10 +22,10 @@ function onload() {
     minZoom:3,
   //overlaying custom made mapboxGL map
 //    style: 'mapbox://styles/quadweather/cjsgo4h6905rg1fmcimx6j9dr'
-    style: 'mapbox://styles/mapbox/bright-v9',
-    antialias:true,
-    zoom:9,
-    center:[settings.mlon, settings.mlat],
+    style: 'mapbox://styles/quadweather/ckftuk99o0lar1at0siprao95',
+    antialias:false,
+    zoom:15,
+    center:[settings.rlon, settings.rlat],
     //pitch:70.,
     //bearing:315
   });
@@ -35,18 +35,31 @@ function onload() {
   new mapboxgl.Marker()
     .setLngLat([settings.rlon, settings.rlat])
     .addTo(map)
+  
+  new mapboxgl.Marker()
+    .setLngLat([-97.27775, 35.33305])
+    .addTo(map)
 
   function createTexture(gl) {
-    var colors = {"refc0":['rgba(59,59,59,1)', //0
-          'rgba(59,59,59,1)', //10
-          'rgba(0,151,189,1)', //20
-          'rgba(21,166,2,1)',   //30
-          'rgba(250,208,0,1)',  //40
-          'rgba(240,124,18,1)', //50
-          'rgba(214,18,0,1)', //60
-          'rgba(201,92,255,1)', //70
-        ]}
-    var values = {"refc0":[0, 1, 2, 3, 4, 5, 6, 7]}
+    var colors = {"refc0":[
+      '#8a8a8a',
+      '#04e9e7',
+      '#019ff4',
+      '#0300f4',
+      '#02fd02',
+      '#01c501',
+      '#008e00',
+      '#fdf802',
+      '#e5bc00',
+      '#fd9500',
+      '#fd0000',
+      '#d40000',
+      '#bc0000',
+      '#f800fd',
+      '#9854c6',
+      '#fdfdfd'
+    ]}
+    var values = {"refc0":[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]}
     var colors=colors["refc0"];
     var levs=values["refc0"];
     var colortcanvas=document.getElementById("texturecolorbar");
