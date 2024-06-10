@@ -14,18 +14,36 @@
     <canvas id="texturecolorbar" class="texturecolorbar"></canvas>
     <div id="map" class="mobilemap"></div>
     <script type="x-shader/x-vertex" id="vertexShader">
-      //x: azimuth
-      //y: range
-      //z: value
       attribute vec2 aPosition;
+      varying float x, y, Re, c, cos_c, sin_c, lat, lon, lat_0, lon_0, pi, mx, my;
       attribute float aColor;
       uniform mat4 u_matrix;
       varying float color;
-
-      void main() {
+      
+      void main() {     
         color = aColor;
-        gl_Position = u_matrix * vec4(aPosition.x,aPosition.y,0.0,1.0);
+        pi = radians(180.);
+        
+        x = aPosition.x*sin(aPosition.y*pi/180.);
+        y = aPosition.x*cos(aPosition.y*pi/180.);
+
+        Re = 6371000.;
+        lat_0 = radians(35.33335);
+        lon_0 = radians(-97.27776);
+        x /= Re;
+        y /= Re;
+        c = length(vec2(x, y));
+        cos_c = cos(c);
+        sin_c = sin(c);
+
+        lat = asin(cos_c*sin(lat_0)+y*sin_c*cos(lat_0)/c);
+        lon = lon_0+atan(x*sin_c/(c*cos(lat_0)*cos_c-y*sin(lat_0)*sin_c));
+        
+        mx = 0.5 + 0.5*lon/pi;
+        my = 0.5 - 0.5*log(tan(pi/4. + lat/2.))/pi;
+        gl_Position = u_matrix * vec4(mx, my, 0., 1.);
       }
+      
     </script>
     <script type="x-shader/x-fragment" id="fragmentShader">
       precision mediump float;
@@ -39,11 +57,8 @@
       }
     </script>
     <script>
-      //$.getJSON('./data/radar/KAMA_sub.json', function(data) {
-      //  console.log(data);
-      //})
     </script>
-    <script src="scripts/demo-radar-script.js"></script>
+    <script type="module" src="scripts/demo-radar-script.js"></script>
   </body>  
 </html>
 

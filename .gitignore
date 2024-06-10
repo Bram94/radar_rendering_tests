@@ -1,1 +1,6 @@
 .DS_Store
+*.gz
+*.lnk
+python/tmp*
+desktop.ini
+/data/radar/test_*
