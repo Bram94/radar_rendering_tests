@@ -1,31 +1,29 @@
-
 export async function generateVertices(url) {
-  var gateRes = 250;
-
   //get file from server
-  const response = await fetch(url);
   var t = new Date().getTime();
-  const json = await response.json();
-  console.log(new Date().getTime()-t, "parse json");
+  const response = await fetch(url);
+  const gzip_blob = await response.blob();
+  const array = new Uint8Array(await gzip_blob.arrayBuffer());
+  const text = pako.ungzip(array, {to: "string"});
+  const json = JSON.parse(text);
+  console.log(new Date().getTime()-t, "fetch and parse json");
 
+  const firstGate = json.first_gate;
+  const gateRes = json.gate_spacing;
+  const totalVertices = json.total_bins*6;
   var azs = json.azimuths;
   var min = azs[0];
   var max = azs[azs.length-1];
-  
-  var total_length = 0;
-  for (var key in json.radials) {
-    total_length += json.radials[key].length*6;
-  }
-  
-  var pos = new Float32Array(2*total_length);
-  var colors = new Float32Array(total_length);
+    
+  var pos = new Float32Array(2*totalVertices);
+  var colors = new Float32Array(totalVertices);
   var indices = new Int32Array([]);
 
   var n = 0;
   var leftAz, rightAz, bottomR, topR, values, az, colorVal, ranges;
   for (var key in json.radials) {
     key = +key;
-    ranges = (new Float32Array(json.radials[key])).map(x => x*gateRes);
+    ranges = (new Float32Array(json.radials[key])).map(x => firstGate+x*gateRes);
     az = azs[key];
 
     //case when first az
@@ -50,15 +48,13 @@ export async function generateVertices(url) {
       
       pos[2*n] = bottomR;
       pos[2*n+1] = leftAz;
-
       pos[2*n+2] = topR;
       pos[2*n+3] = leftAz;
-
       pos[2*n+4] = bottomR;
       pos[2*n+5] = rightAz;
+      
       pos[2*n+6] = bottomR;
       pos[2*n+7] = rightAz;
-
       pos[2*n+8] = topR;
       pos[2*n+9] = leftAz;
       pos[2*n+10] = topR;

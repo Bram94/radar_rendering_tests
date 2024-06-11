@@ -182,7 +182,7 @@ var paintingFinished = true;
 var paintingFinishedTime = new Date().getTime();
 async function display() {
   settings["phi"]=0.483395;
-  settings["base"] = `../data/radar/test_${time}_${scan}.json`;
+  settings["base"] = `../data/radar/test_gzip_uint8/test_${time}_${scan}.json.gz`;
   
   const { pos, indices, colors } = await generateVertices(settings["base"]);
   
