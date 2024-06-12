@@ -50,10 +50,7 @@
       varying float color;
       uniform sampler2D u_texture;
       void main() {
-        //gl_FragColor = vec4(0.0,color/60.0,0.0,1.0);
-        float calcolor = (color)/(70.0);
-        gl_FragColor = texture2D(u_texture,vec2(min(max(calcolor,0.0),1.0),0.0));
-        //gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+        gl_FragColor = texture2D(u_texture,vec2(color/255.),0.0);
       }
     </script>
     <script>
