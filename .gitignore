@@ -1,5 +1,3 @@
-.DS_Store
-*.gz
 *.lnk
 python/tmp*
 desktop.ini
