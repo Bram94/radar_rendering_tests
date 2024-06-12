@@ -16,8 +16,7 @@ export async function generateVertices(url) {
   var max = azs[azs.length-1];
     
   var pos = new Float32Array(2*totalVertices);
-  var colors = new Float32Array(totalVertices);
-  var indices = new Int32Array([]);
+  var colors = new Uint8Array(totalVertices);
 
   var n = 0;
   var leftAz, rightAz, bottomR, topR, values, az, colorVal, ranges;
@@ -70,5 +69,5 @@ export async function generateVertices(url) {
   }
   
   console.log(new Date().getTime()-t, "loop");
-  return { pos, indices, colors };
+  return { pos, colors };
 }

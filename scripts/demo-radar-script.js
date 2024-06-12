@@ -46,44 +46,31 @@ new mapboxgl.Marker()
 
 function createTexture(gl) {
   var colors = {"refc0":[
-    '#8a8a8a',
-    '#04e9e7',
-    '#019ff4',
-    '#0300f4',
-    '#02fd02',
-    '#01c501',
-    '#008e00',
-    '#fdf802',
-    '#e5bc00',
-    '#fd9500',
-    '#fd0000',
-    '#d40000',
-    '#bc0000',
-    '#f800fd',
-    '#9854c6',
-    '#fdfdfd'
+    '#000000',
+    '#ffffff'
   ]}
-  var values = {"refc0":[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]}
+  var values = {"refc0":[0,255]};
   var colors=colors["refc0"];
   var levs=values["refc0"];
+  console.log(levs);
   var colortcanvas=document.getElementById("texturecolorbar");
   colortcanvas.width=1200;
   colortcanvas.height=1;
   var ctxt = colortcanvas.getContext('2d');
   ctxt.clearRect(0,0,colortcanvas.width,colortcanvas.height); 
   var grdt=ctxt.createLinearGradient(0,0,1200,0);
-  var cmax=70;
+  var cmax=255;
   var cmin=0;
   var clen=colors.length;
 
   for (var i=0;i<clen;++i) {
+    console.log(i, (levs[i]-cmin)/(cmax-cmin));
     grdt.addColorStop((levs[i]-cmin)/(cmax-cmin),colors[i]);
   }
   ctxt.fillStyle=grdt;
   ctxt.fillRect(0,0,1200,1);
   var imagedata=ctxt.getImageData(0,0,1200,1);
   pageState.imagedata = imagedata;
-  console.log(imagedata);
   var imagetexture=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,imagetexture);
   pageState.imagetexture = imagetexture;
@@ -139,7 +126,8 @@ var layer = {
     gl.useProgram(this.program);
     //how to remove vertices from position buffer
     var size=2;
-    var type=gl.FLOAT;
+    const typeVertices = gl.FLOAT;
+    const typeColors = gl.UNSIGNED_BYTE;
     var normalize=false;
     var stride=0;
     var offset=0;
@@ -149,12 +137,12 @@ var layer = {
     gl.bindBuffer(gl.ARRAY_BUFFER,this.positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER,pageState.positions,gl.STATIC_DRAW);
     gl.enableVertexAttribArray(this.positionLocation);
-    gl.vertexAttribPointer(this.positionLocation,size,type,normalize,stride,offset);
+    gl.vertexAttribPointer(this.positionLocation,size,typeVertices,normalize,stride,offset);
     
     gl.bindBuffer(gl.ARRAY_BUFFER,this.colorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER,pageState.colors,gl.STATIC_DRAW);
     gl.enableVertexAttribArray(this.colorLocation);
-    gl.vertexAttribPointer(this.colorLocation,1,type,normalize,stride,offset);
+    gl.vertexAttribPointer(this.colorLocation,1,typeColors,normalize,stride,offset);
 
     gl.bindTexture(gl.TEXTURE_2D,pageState.imagetexture);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,pageState.imagedata)
@@ -163,15 +151,13 @@ var layer = {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       
     var primitiveType = gl.TRIANGLES;
-    var count = pageState.indices.length;
-    gl.drawArrays(primitiveType, offset, pageState.positions.length/2);
+    gl.drawArrays(primitiveType, offset, pageState.colors.length);
   }//end render
 }
 
 function dataStore() {
   return {
     positions:null,
-    indices:null,
     colors:null
   }
 }
@@ -184,10 +170,9 @@ async function display() {
   settings["phi"]=0.483395;
   settings["base"] = `../data/radar/test_gzip_uint8/test_${time}_${scan}.json.gz`;
   
-  const { pos, indices, colors } = await generateVertices(settings["base"]);
+  const { pos, colors } = await generateVertices(settings["base"]);
   
   pageState.positions = pos;
-  pageState.indices = indices;
   pageState.colors = colors;
   if (start == 1) {
     map.addLayer(layer);
