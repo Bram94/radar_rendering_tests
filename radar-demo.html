@@ -1,37 +1,42 @@
 <!doctype html>
 <html>
   <head>
-    <title>QuadWeather Radar</title>
+    <title>Radar display test</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no,width=device-width' />
-    <meta name="Description" content="View 3D radar for severe storms." />
+    <meta name="Description" content="Display radar data using WebGL" />
     <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.css" rel="stylesheet">
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
     <link rel="stylesheet" href="css/radarstyle.css">
     <link href="https://fonts.googleapis.com/css?family=Oleo+Script&display=swap" rel="stylesheet">
   </head>
   <body>
     <canvas id="texturecolorbar" class="texturecolorbar"></canvas>
     <div id="map" class="mobilemap"></div>
-    <script type="x-shader/x-vertex" id="vertexShader">
-      attribute vec2 aPosition;
-      varying float x, y, Re, c, cos_c, sin_c, lat, lon, lat_0, lon_0, pi, mx, my;
-      attribute float aColor;
+    <script type="x-shader/x-vertex" id="vertexShader"> #version 300 es
+      in vec2 aPosition;
+      in float aColor;
       uniform mat4 u_matrix;
-      varying float color;
+      uniform float radar_lat, radar_lon, scanangle;
+      out float theta, ke, Re, az, sr, gr, h, x, y, c, cos_c, sin_c, lat, lon, lat_0, lon_0, pi, mx, my;
+      flat out float color;
       
       void main() {     
-        color = aColor;
         pi = radians(180.);
-        
-        x = aPosition.x*sin(aPosition.y*pi/180.);
-        y = aPosition.x*cos(aPosition.y*pi/180.);
-
+        ke = 4./3.;
         Re = 6371000.;
-        lat_0 = radians(35.33335);
-        lon_0 = radians(-97.27776);
-        x /= Re;
-        y /= Re;
+        lat_0 = radians(radar_lat);
+        lon_0 = radians(radar_lon);
+        theta = radians(scanangle);
+
+        az = radians(aPosition.y);        
+        sr = aPosition.x;
+        h = sqrt(pow(sr, 2.)+pow(ke*Re, 2.)+2.*ke*Re*sr*sin(theta));
+        gr = ke*Re*asin(sr*cos(theta)/h);
+        
+        x = gr*sin(az)/Re;
+        y = gr*cos(az)/Re;
+        
         c = length(vec2(x, y));
         cos_c = cos(c);
         sin_c = sin(c);
@@ -42,20 +47,23 @@
         mx = 0.5 + 0.5*lon/pi;
         my = 0.5 - 0.5*log(tan(pi/4. + lat/2.))/pi;
         gl_Position = u_matrix * vec4(mx, my, 0., 1.);
+        color = aColor;
       }
       
     </script>
-    <script type="x-shader/x-fragment" id="fragmentShader">
+    <script type="x-shader/x-fragment" id="fragmentShader"> #version 300 es
       precision mediump float;
-      varying float color;
+      flat in float color;
+      out vec4 fragColor;
       uniform sampler2D u_texture;
       void main() {
-        gl_FragColor = texture2D(u_texture,vec2(color/255.),0.0);
+        fragColor = texture(u_texture,vec2(color),0.);
       }
     </script>
     <script>
     </script>
   <script type="text/javascript" src="scripts/pako.min.js"></script>
+  <script type="text/javascript" src="node_modules/zarr/zarr.umd.js"></script>
   <script type="module" src="scripts/demo-radar-script.js"></script>
   </body>  
 </html>

@@ -2,21 +2,19 @@ import { generateVertices } from './generateVerticesRadarDemo.js';
 
 var scan = 0;
 var time = 0;
-var start = 1;
+var start = true;
+var changingContent = false;
 
 var settings = {};
-settings["lat"]=35.0;
-settings["lon"]=-101.72;
-settings["mlat"]=34.95;
-settings["mlon"]=-101.75;
-settings["rlat"]=35.33335;
-settings["rlon"]=-97.27776;
+settings["rlat"] = 35.33335;
+settings["rlon"] = -97.27776;
+settings["scanangle"] = 0.5;
 
 //set up mapbox map
-mapboxgl.accessToken=
+mapboxgl.accessToken = 
 "pk.eyJ1IjoicXVhZHdlYXRoZXIiLCJhIjoiY2pzZTI0cXFjMDEyMTQzbnQ2MXYxMzd2YSJ9.kHgQu2YL36SZUgpXMlfaFg";
 
-var map=window.map=new mapboxgl.Map({
+var map = window.map = new mapboxgl.Map({
 container:'map',
 attributionControl:false,
 zoom:3,
@@ -46,35 +44,37 @@ new mapboxgl.Marker()
 
 function createTexture(gl) {
   var colors = {"refc0":[
-    '#000000',
-    '#ffffff'
+    '#00000000',
+    '#00000000',
+    '#000000ff',
+    '#ffffffff'
   ]}
-  var values = {"refc0":[0,255]};
-  var colors=colors["refc0"];
-  var levs=values["refc0"];
-  console.log(levs);
-  var colortcanvas=document.getElementById("texturecolorbar");
-  colortcanvas.width=1200;
-  colortcanvas.height=1;
+  var values = {"refc0":[0,1,1,255]};
+  var colors = colors["refc0"];
+  var levs = values["refc0"];
+  var colortcanvas = document.getElementById("texturecolorbar");
+  colortcanvas.width = 1200;
+  colortcanvas.height = 1;
   var ctxt = colortcanvas.getContext('2d');
   ctxt.clearRect(0,0,colortcanvas.width,colortcanvas.height); 
-  var grdt=ctxt.createLinearGradient(0,0,1200,0);
-  var cmax=255;
-  var cmin=0;
-  var clen=colors.length;
+  var grdt = ctxt.createLinearGradient(0,0,1200,0);
+  var cmax = 255;
+  var cmin = 0;
+  var clen = colors.length;
 
-  for (var i=0;i<clen;++i) {
+  for (var i=0; i<clen; ++i) {
     console.log(i, (levs[i]-cmin)/(cmax-cmin));
     grdt.addColorStop((levs[i]-cmin)/(cmax-cmin),colors[i]);
   }
-  ctxt.fillStyle=grdt;
+  ctxt.fillStyle = grdt;
   ctxt.fillRect(0,0,1200,1);
-  var imagedata=ctxt.getImageData(0,0,1200,1);
+  var imagedata = ctxt.getImageData(0,0,1200,1);
   pageState.imagedata = imagedata;
-  var imagetexture=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,imagetexture);
-  pageState.imagetexture = imagetexture;
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,imagedata)
+  var imagetexture = gl.createTexture();
+  
+  gl.activeTexture(gl.TEXTURE1); // Using gl.TEXTURE0 leads to the need of rebinding the texture on every call of layer.render
+  gl.bindTexture(gl.TEXTURE_2D, imagetexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imagedata);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -91,16 +91,17 @@ var layer = {
   minzoom:0,
   maxzoom:18,
 
-  onAdd: function(map,gl) {
+  onAdd: function(map, gl) {
     masterGl = gl;
+    console.log(gl);
     createTexture(gl);
-    var ext = gl.getExtension('OES_element_index_uint');
-    var vertexShader=gl.createShader(gl.VERTEX_SHADER);
+    
+    var vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, vertexSource);
     gl.compileShader(vertexShader);
     var compilationLog = gl.getShaderInfoLog(vertexShader);
     console.log('Shader compiler log: ' + compilationLog);
-    var fragmentShader=gl.createShader(gl.FRAGMENT_SHADER);
+    var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragmentShader, fragmentSource);
     gl.compileShader(fragmentShader);
     var compilationLog = gl.getShaderInfoLog(fragmentShader);
@@ -109,50 +110,58 @@ var layer = {
     gl.attachShader(this.program, vertexShader);
     gl.attachShader(this.program, fragmentShader);
     gl.linkProgram(this.program);
+    // add this for extra debugging
+    if ( !gl.getProgramParameter(this.program, gl.LINK_STATUS) ) {
+      var info = gl.getProgramInfoLog(this.program);
+      throw new Error('Could not compile WebGL program. \n\n' + info);
+    }
+    
+    this.radar_lat = gl.getUniformLocation(this.program, "radar_lat");
+    this.radar_lon = gl.getUniformLocation(this.program, "radar_lon");
+    this.scanangle = gl.getUniformLocation(this.program, "scanangle");
     this.matrixLocation = gl.getUniformLocation(this.program, "u_matrix");
     this.positionLocation = gl.getAttribLocation(this.program, "aPosition");
     this.colorLocation = gl.getAttribLocation(this.program, "aColor");
-    this.textureLocation=gl.getUniformLocation(this.program,"u_texture");
+    this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
 
     //data buffers
     this.positionBuffer = gl.createBuffer();
-    this.indexBuffer = gl.createBuffer();
     this.colorBuffer = gl.createBuffer();
-  },//end onAdd
-  render: function(gl,matrix) {
-    //console.log("render base");
-    var ext = gl.getExtension('OES_element_index_uint');
-    //use program
+  },
+  render: function(gl, matrix) {
     gl.useProgram(this.program);
-    //how to remove vertices from position buffer
-    var size=2;
+    
+    const sizeVertices = 2;
+    const sizeColors = 1;
     const typeVertices = gl.FLOAT;
     const typeColors = gl.UNSIGNED_BYTE;
-    var normalize=false;
-    var stride=0;
-    var offset=0;
-    //calculate matrices
-    gl.uniformMatrix4fv(this.matrixLocation,false,matrix);
-    gl.uniform1i(this.textureLocation,0);
-    gl.bindBuffer(gl.ARRAY_BUFFER,this.positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER,pageState.positions,gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(this.positionLocation);
-    gl.vertexAttribPointer(this.positionLocation,size,typeVertices,normalize,stride,offset);
+    var normalize = true;
+    var stride = 0;
+    var offset = 0;
     
-    gl.bindBuffer(gl.ARRAY_BUFFER,this.colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER,pageState.colors,gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(this.colorLocation);
-    gl.vertexAttribPointer(this.colorLocation,1,typeColors,normalize,stride,offset);
+    gl.uniformMatrix4fv(this.matrixLocation, false, matrix);
+    
+    if (changingContent) {
+      gl.uniform1f(this.scanangle, settings.scanangle);
+      gl.uniform1f(this.radar_lat, settings.rlat);
+      gl.uniform1f(this.radar_lon, settings.rlon);
+      gl.uniform1i(this.textureLocation, 1); // Corresponds to gl.TEXTURE1 used in gl.activateTexture
 
-    gl.bindTexture(gl.TEXTURE_2D,pageState.imagetexture);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,pageState.imagedata)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      
-    var primitiveType = gl.TRIANGLES;
-    gl.drawArrays(primitiveType, offset, pageState.colors.length);
-  }//end render
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, pageState.positions, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(this.positionLocation);
+      gl.vertexAttribPointer(this.positionLocation, sizeVertices, typeVertices, normalize, stride, offset);
+    
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, pageState.colors, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(this.colorLocation);
+      gl.vertexAttribPointer(this.colorLocation, sizeColors, typeColors, normalize, stride, offset);      
+    }
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, offset, pageState.colors.length);
+    
+    changingContent = false;
+  }
 }
 
 function dataStore() {
@@ -167,13 +176,12 @@ var pageState = dataStore();
 var paintingFinished = true;
 var paintingFinishedTime = new Date().getTime();
 async function display() {
-  settings["phi"]=0.483395;
-  settings["base"] = `../data/radar/test_gzip_uint8/test_${time}_${scan}.json.gz`;
-  
-  const { pos, colors } = await generateVertices(settings["base"]);
+  const url = `data/radar/test_numpy_zarr/test_${time}_${scan}.zarr`;
+  const { pos, colors } = await generateVertices(url);
   
   pageState.positions = pos;
   pageState.colors = colors;
+  changingContent = true;
   if (start == 1) {
     map.addLayer(layer);
   } else {
@@ -205,14 +213,14 @@ function onKeyPress(event) {
       break;
   }
   // console.log(scan, time);
-  if (scan >= 0 && scan <= 15 && time >= 0 && time <= 13) {
+  if (scan >= 0 && scan <= 15 && time >= 0 && time <= 27) {
     paintingFinished = false;
-    start = 0;
+    start = false;
     display();
     // console.log("display finished");
   } else {
     scan = Math.min(Math.max(scan, 0), 15);
-    time = Math.min(Math.max(time, 0), 13);
+    time = Math.min(Math.max(time, 0), 27);
   }
 }
 
