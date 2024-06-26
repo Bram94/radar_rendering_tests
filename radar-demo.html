@@ -17,7 +17,8 @@
       in vec2 aPosition;
       in float aColor;
       uniform mat4 u_matrix;
-      uniform float radar_lat, radar_lon, scanangle;
+      uniform float radar_lat, radar_lon, scanangle, gateres, azimuths[720];
+      flat out int i_az;
       out float theta, ke, Re, az, sr, gr, h, x, y, c, cos_c, sin_c, lat, lon, lat_0, lon_0, pi, mx, my;
       flat out float color;
       
@@ -29,8 +30,9 @@
         lon_0 = radians(radar_lon);
         theta = radians(scanangle);
 
-        az = radians(aPosition.y);        
-        sr = aPosition.x;
+        i_az = int(aPosition.y);  
+        az = radians(azimuths[i_az]);
+        sr = aPosition.x*gateres;
         h = sqrt(pow(sr, 2.)+pow(ke*Re, 2.)+2.*ke*Re*sr*sin(theta));
         gr = ke*Re*asin(sr*cos(theta)/h);
         

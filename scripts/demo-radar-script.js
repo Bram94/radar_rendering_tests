@@ -9,6 +9,7 @@ var settings = {};
 settings["rlat"] = 35.33335;
 settings["rlon"] = -97.27776;
 settings["scanangle"] = 0.5;
+settings["gateres"] = 250;
 
 //set up mapbox map
 mapboxgl.accessToken = 
@@ -46,10 +47,34 @@ function createTexture(gl) {
   var colors = {"refc0":[
     '#00000000',
     '#00000000',
-    '#000000ff',
-    '#ffffffff'
+    '#744eadff',
+    '#938d75ff',
+    '#969153ff',
+    '#d2d4b4ff',
+    '#cccfb4ff',
+    '#415b9eff',
+    '#4361a2ff',
+    '#6ad0e4ff',
+    '#6fd6e8ff',
+    '#35d55bff',
+    '#11d518ff',
+    '#095e09ff',
+    '#1d6809ff',
+    '#ead204ff',
+    '#ffe200ff',
+    '#ff8000ff',
+    '#ff0000ff',
+    '#710000ff',
+    '#ffffffff',
+    '#ff92ffff',
+    '#ff75ffff',
+    '#e10be3ff',
+    '#b200ffff',
+    '#6300d6ff',
+    '#05ecf0ff',
+    '#012020ff'
   ]}
-  var values = {"refc0":[0,1,1,255]};
+  var values = {"refc0":[0,2,2, 28, 28, 51, 51, 96, 96, 114, 114, 124, 124, 153, 153, 164, 164, 187, 187, 210, 210, 221, 221, 232, 232, 244, 244, 255]};
   var colors = colors["refc0"];
   var levs = values["refc0"];
   var colortcanvas = document.getElementById("texturecolorbar");
@@ -118,7 +143,9 @@ var layer = {
     
     this.radar_lat = gl.getUniformLocation(this.program, "radar_lat");
     this.radar_lon = gl.getUniformLocation(this.program, "radar_lon");
+    this.azimuths = gl.getUniformLocation(this.program, "azimuths");
     this.scanangle = gl.getUniformLocation(this.program, "scanangle");
+    this.gateres = gl.getUniformLocation(this.program, "gateres");
     this.matrixLocation = gl.getUniformLocation(this.program, "u_matrix");
     this.positionLocation = gl.getAttribLocation(this.program, "aPosition");
     this.colorLocation = gl.getAttribLocation(this.program, "aColor");
@@ -143,17 +170,19 @@ var layer = {
     
     if (changingContent) {
       gl.uniform1f(this.scanangle, settings.scanangle);
+      gl.uniform1f(this.gateres, settings.gateres);
+      gl.uniform1fv(this.azimuths, pageState.azimuths);
       gl.uniform1f(this.radar_lat, settings.rlat);
       gl.uniform1f(this.radar_lon, settings.rlon);
       gl.uniform1i(this.textureLocation, 1); // Corresponds to gl.TEXTURE1 used in gl.activateTexture
 
       gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, pageState.positions, gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, pageState.positions, gl.STREAM_DRAW);
       gl.enableVertexAttribArray(this.positionLocation);
       gl.vertexAttribPointer(this.positionLocation, sizeVertices, typeVertices, normalize, stride, offset);
     
       gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, pageState.colors, gl.DYNAMIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, pageState.colors, gl.STREAM_DRAW);
       gl.enableVertexAttribArray(this.colorLocation);
       gl.vertexAttribPointer(this.colorLocation, sizeColors, typeColors, normalize, stride, offset);      
     }
@@ -167,7 +196,8 @@ var layer = {
 function dataStore() {
   return {
     positions:null,
-    colors:null
+    colors:null,
+    azimuths:null
   }
 }
 
@@ -177,10 +207,11 @@ var paintingFinished = true;
 var paintingFinishedTime = new Date().getTime();
 async function display() {
   const url = `data/radar/test_numpy_zarr/test_${time}_${scan}.zarr`;
-  const { pos, colors } = await generateVertices(url);
+  const { pos, colors, azimuths } = await generateVertices(url);
   
   pageState.positions = pos;
   pageState.colors = colors;
+  pageState.azimuths = azimuths;
   changingContent = true;
   if (start == 1) {
     map.addLayer(layer);
