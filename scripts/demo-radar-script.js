@@ -43,7 +43,7 @@ new mapboxgl.Marker()
 .addTo(map)
 
 
-function createTexture(gl) {
+function createPaletteTexture(gl) {
   var colors = {"refc0":[
     '#00000000',
     '#00000000',
@@ -102,9 +102,20 @@ function createTexture(gl) {
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imagedata);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 }
 
+function createImageTexture(gl) {
+  var imageTex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE2);
+  gl.bindTexture(gl.TEXTURE_2D, imageTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, 1, 1, 0, gl.ALPHA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+}
 
 //compile shaders
 var vertexSource = document.getElementById('vertexShader').textContent;
@@ -119,7 +130,8 @@ var layer = {
   onAdd: function(map, gl) {
     masterGl = gl;
     console.log(gl);
-    createTexture(gl);
+    createPaletteTexture(gl);
+    createImageTexture(gl);
     
     var vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, vertexSource);
@@ -146,26 +158,28 @@ var layer = {
     this.azimuths = gl.getUniformLocation(this.program, "azimuths");
     this.scanangle = gl.getUniformLocation(this.program, "scanangle");
     this.gateres = gl.getUniformLocation(this.program, "gateres");
+    this.data_shape = gl.getUniformLocation(this.program, "data_shape");
+    
     this.matrixLocation = gl.getUniformLocation(this.program, "u_matrix");
     this.positionLocation = gl.getAttribLocation(this.program, "aPosition");
-    this.colorLocation = gl.getAttribLocation(this.program, "aColor");
-    this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
+    this.texpositionLocation = gl.getAttribLocation(this.program, "aTexPosition");
+    
+    this.paletteLoc = gl.getUniformLocation(this.program, "u_palette");
+    this.imageLoc = gl.getUniformLocation(this.program, "u_image");
+    
+    gl.useProgram(this.program);
+    // tell it to use texture units 1 and 2 for the palette and image. These correspond to gl.TEXTURE1 and gl.TEXTURE2 used in gl.activeTexture.
+    // Texture 0 also exists, but using this leads to the need of rebinding the texture on every call of layer.render.
+    gl.uniform1i(this.paletteLoc, 1);
+    gl.uniform1i(this.imageLoc, 2);
 
     //data buffers
     this.positionBuffer = gl.createBuffer();
-    this.colorBuffer = gl.createBuffer();
+    this.texpositionBuffer = gl.createBuffer();
   },
   render: function(gl, matrix) {
     gl.useProgram(this.program);
-    
-    const sizeVertices = 2;
-    const sizeColors = 1;
-    const typeVertices = gl.FLOAT;
-    const typeColors = gl.UNSIGNED_BYTE;
-    var normalize = true;
-    var stride = 0;
-    var offset = 0;
-    
+            
     gl.uniformMatrix4fv(this.matrixLocation, false, matrix);
     
     if (changingContent) {
@@ -174,20 +188,31 @@ var layer = {
       gl.uniform1fv(this.azimuths, pageState.azimuths);
       gl.uniform1f(this.radar_lat, settings.rlat);
       gl.uniform1f(this.radar_lon, settings.rlon);
-      gl.uniform1i(this.textureLocation, 1); // Corresponds to gl.TEXTURE1 used in gl.activateTexture
+      gl.uniform2f(this.data_shape, pageState.shape[1], pageState.shape[0]);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, pageState.positions, gl.STREAM_DRAW);
-      gl.enableVertexAttribArray(this.positionLocation);
-      gl.vertexAttribPointer(this.positionLocation, sizeVertices, typeVertices, normalize, stride, offset);
+      const sizeVertices = 2;
+      const typeVertices = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      var offset = 0; // Must be variable somehow
+      
+      if (pageState.update_vertices) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, pageState.positions, gl.STREAM_DRAW);
+        gl.enableVertexAttribArray(this.positionLocation);
+        gl.vertexAttribPointer(this.positionLocation, sizeVertices, typeVertices, normalize, stride, offset);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texpositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, pageState.texpositions, gl.STREAM_DRAW);
+        gl.enableVertexAttribArray(this.texpositionLocation);
+        gl.vertexAttribPointer(this.texpositionLocation, sizeVertices, typeVertices, normalize, stride, offset);
+      }
     
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, pageState.colors, gl.STREAM_DRAW);
-      gl.enableVertexAttribArray(this.colorLocation);
-      gl.vertexAttribPointer(this.colorLocation, sizeColors, typeColors, normalize, stride, offset);      
+      gl.activeTexture(gl.TEXTURE2);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, pageState.shape[1], pageState.shape[0], 0, gl.ALPHA, gl.UNSIGNED_BYTE, pageState.values);
     }
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, offset, pageState.colors.length);
+    gl.drawArrays(gl.TRIANGLE_STRIP, offset, pageState.positions.length/2);
     
     changingContent = false;
   }
@@ -196,8 +221,11 @@ var layer = {
 function dataStore() {
   return {
     positions:null,
-    colors:null,
-    azimuths:null
+    texpositions:null,
+    values:null,
+    azimuths:null,
+    shape:null,
+    update_vertices:null
   }
 }
 
@@ -206,12 +234,15 @@ var pageState = dataStore();
 var paintingFinished = true;
 var paintingFinishedTime = new Date().getTime();
 async function display() {
-  const url = `data/radar/test_numpy_zarr/test_${time}_${scan}.zarr`;
-  const { pos, colors, azimuths } = await generateVertices(url);
-  
+  const url = `data/radar/test_numpy_zarr_flat/test_${time}_${scan}.zarr`;
+  const { pos, texpos, values, azimuths, shape, update_vertices } = await generateVertices(url);
+
   pageState.positions = pos;
-  pageState.colors = colors;
+  pageState.texpositions = texpos;
+  pageState.values = values;
   pageState.azimuths = azimuths;
+  pageState.shape = shape;
+  pageState.update_vertices = update_vertices;
   changingContent = true;
   if (start == 1) {
     map.addLayer(layer);
