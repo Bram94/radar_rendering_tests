@@ -256,7 +256,7 @@ async function display() {
 var t = new Date().getTime();
 function onKeyPress(event) {
 	// console.log(event.key);
-  if (!paintingFinished || new Date().getTime() - paintingFinishedTime < 10) {
+  if (!paintingFinished || new Date().getTime() - paintingFinishedTime < 0) {
     return;
   }
 

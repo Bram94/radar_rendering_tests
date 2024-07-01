@@ -16,6 +16,7 @@
     <script type="x-shader/x-vertex" id="vertexShader"> #version 300 es
       in vec2 aPosition, aTexPosition;
       uniform mat4 u_matrix;
+      // Actual provided azimuths length can also be smaller than 720, it just should not be larger;
       uniform float radar_lat, radar_lon, scanangle, gateres, azimuths[720];
       uniform vec2 data_shape;
       int i_az;
@@ -30,6 +31,7 @@
         lon_0 = radians(radar_lon);
         theta = radians(scanangle);
 
+        // aPosition.y is an azimuth index, which needs to be mapped to an actual azimuth angle.
         i_az = int(mod(aPosition.y, data_shape.y));
         if (aPosition.y >= data_shape.y) {
           // Vertex buffers are only updated when the number of azimuths or radial gates increases, not when it decreases. So it's possible that not
@@ -44,6 +46,7 @@
         } else {
           az = radians(azimuths[i_az]);
         }
+        // aPosition.x is a range gate index, which needs to be converted to an actual range.
         sr = aPosition.x*gateres;
         h = sqrt(pow(sr, 2.)+pow(ke*Re, 2.)+2.*ke*Re*sr*sin(theta));
         gr = ke*Re*asin(sr*cos(theta)/h);
