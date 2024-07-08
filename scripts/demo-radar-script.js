@@ -212,7 +212,7 @@ var layer = {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, pageState.shape[1], pageState.shape[0], 0, gl.ALPHA, gl.UNSIGNED_BYTE, pageState.values);
     }
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, offset, pageState.positions.length/2);
+    gl.drawArrays(gl.TRIANGLES, offset, pageState.positions.length/2);
     
     changingContent = false;
   }

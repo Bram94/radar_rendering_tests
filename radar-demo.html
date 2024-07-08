@@ -65,7 +65,7 @@
         my = 0.5 - 0.5*log(tan(pi/4. + lat/2.))/pi;
         gl_Position = u_matrix * vec4(mx, my, 0., 1.);
         
-        v_texcoord = (aTexPosition+0.5)/data_shape;
+        v_texcoord = aTexPosition/data_shape;
       }
       
     </script>
