@@ -1,15 +1,13 @@
 import { generateVertices } from './generateVerticesRadarDemo.js';
 
 var scan = 0;
-var time = 0;
+var time = 10;
 var start = true;
 var changingContent = false;
 
 var settings = {};
 settings["rlat"] = 35.33335;
 settings["rlon"] = -97.27776;
-settings["scanangle"] = 0.5;
-settings["gateres"] = 250;
 
 //set up mapbox map
 mapboxgl.accessToken = 
@@ -39,7 +37,19 @@ new mapboxgl.Marker()
 .addTo(map)
 
 new mapboxgl.Marker()
-.setLngLat([-97.27775, 35.33305])
+.setLngLat([-97.8316988535486, 35.6428070716210])
+.addTo(map)
+
+new mapboxgl.Marker()
+.setLngLat([-98.78664631025524, 38.06854215296778])
+.addTo(map)
+
+new mapboxgl.Marker()
+.setLngLat([-98.06215215881625, 34.98763436419662])
+.addTo(map)
+
+new mapboxgl.Marker()
+.setLngLat([-98.36821019014079, 32.648868509522835])
 .addTo(map)
 
 
@@ -153,11 +163,6 @@ var layer = {
       throw new Error('Could not compile WebGL program. \n\n' + info);
     }
     
-    this.radar_lat = gl.getUniformLocation(this.program, "radar_lat");
-    this.radar_lon = gl.getUniformLocation(this.program, "radar_lon");
-    this.azimuths = gl.getUniformLocation(this.program, "azimuths");
-    this.scanangle = gl.getUniformLocation(this.program, "scanangle");
-    this.gateres = gl.getUniformLocation(this.program, "gateres");
     this.data_shape = gl.getUniformLocation(this.program, "data_shape");
     
     this.matrixLocation = gl.getUniformLocation(this.program, "u_matrix");
@@ -183,11 +188,6 @@ var layer = {
     gl.uniformMatrix4fv(this.matrixLocation, false, matrix);
     
     if (changingContent) {
-      gl.uniform1f(this.scanangle, settings.scanangle);
-      gl.uniform1f(this.gateres, settings.gateres);
-      gl.uniform1fv(this.azimuths, pageState.azimuths);
-      gl.uniform1f(this.radar_lat, settings.rlat);
-      gl.uniform1f(this.radar_lon, settings.rlon);
       gl.uniform2f(this.data_shape, pageState.shape[1], pageState.shape[0]);
 
       const sizeVertices = 2;
@@ -223,7 +223,6 @@ function dataStore() {
     positions:null,
     texpositions:null,
     values:null,
-    azimuths:null,
     shape:null,
     update_vertices:null
   }
@@ -234,13 +233,12 @@ var pageState = dataStore();
 var paintingFinished = true;
 var paintingFinishedTime = new Date().getTime();
 async function display() {
-  const url = `data/radar/test_numpy_zarr_flat/test_${time}_${scan}.zarr`;
-  const { pos, texpos, values, azimuths, shape, update_vertices } = await generateVertices(url);
+  settings.url = `data/radar/test_numpy_zarr_flat/test_${time}_${scan}.zarr`;
+  const { pos, texpos, values, shape, update_vertices } = await generateVertices(settings);
 
   pageState.positions = pos;
   pageState.texpositions = texpos;
   pageState.values = values;
-  pageState.azimuths = azimuths;
   pageState.shape = shape;
   pageState.update_vertices = update_vertices;
   changingContent = true;
