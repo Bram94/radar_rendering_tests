@@ -252,12 +252,14 @@ async function display() {
 }
 
 var t = new Date().getTime();
+var animating = false;
 function onKeyPress(event) {
 	// console.log(event.key);
   if (!paintingFinished || new Date().getTime() - paintingFinishedTime < 0) {
     return;
   }
 
+  console.log(event.key);
   switch(event.key) {
     case "ArrowDown":
       scan -= 1;
@@ -271,7 +273,13 @@ function onKeyPress(event) {
     case "ArrowRight":
       time += 1;
       break;
+    case " ":
+      animating = !animating;
+      if (animating) {
+        return animate();
+      }
   }
+  
   // console.log(scan, time);
   if (scan >= 0 && scan <= 15 && time >= 0 && time <= 27) {
     paintingFinished = false;
@@ -281,6 +289,25 @@ function onKeyPress(event) {
   } else {
     scan = Math.min(Math.max(scan, 0), 15);
     time = Math.min(Math.max(time, 0), 27);
+  }
+}
+
+var looptime = 0;
+function animate() {
+  if (paintingFinished && new Date().getTime() - paintingFinishedTime > 0) {
+    if (time < 27) {
+      time += 1;
+    } else {
+      time = 0;
+      console.log(new Date().getTime() - looptime);
+      looptime = new Date().getTime();
+    }
+    paintingFinished = false;
+    start = false;
+    display();
+  }
+  if (animating) {
+    setTimeout(() => {requestAnimationFrame(animate);}, 1);
   }
 }
 

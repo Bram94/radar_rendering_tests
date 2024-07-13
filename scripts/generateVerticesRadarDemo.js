@@ -35,18 +35,24 @@ function calculatePosition(az, sr) {
 }
 
 
+var stored_data = {};
 
-var pos, texpos, azimuths, az, az_previous, i1, i2, az1, az2, d1, d2, x, y, bl, tl, br, tr;
+var values, attrs, pos, texpos, azimuths, az, az_previous, i1, i2, az1, az2, d1, d2, x, y, bl, tl, br, tr;
 export async function generateVertices(settings) {
   const t = new Date().getTime();
   
-  //get file from server
-  const z = await zarr.openArray({ store: "http://localhost:8080/", path: settings.url, mode: "r" });
-  const values = (await z.get()).data;
-  const attrs = await z.attrs.asObject();
-
+  if (!(settings.url in stored_data)) {
+    //get file from server
+    const z = await zarr.openArray({ store: "http://localhost:8080/", path: settings.url, mode: "r" });
+    values = (await z.get()).data;
+    attrs = await z.attrs.asObject();
+    stored_data[settings.url] = [values, attrs];
+  } else {
+    values = stored_data[settings.url][0];
+    attrs = stored_data[settings.url][1];
+  }
   console.log(new Date().getTime()-t, "fetch and open zarr");
-
+  
   const nazs = attrs.nazs;
   const ngates = attrs.ngates;
   const gateres = attrs.gate_spacing;
